@@ -22,6 +22,8 @@ async def send_signals(context: ContextTypes.DEFAULT_TYPE = None):
     for symbol in symbols[:20]:  # ограничим до 20
         try:
             closes, volumes = get_klines(symbol)
+
+            print(f"[DEBUG] {symbol}: {len(closes)} свечей")
             if len(closes) < 20:
                 continue
 
@@ -32,7 +34,7 @@ async def send_signals(context: ContextTypes.DEFAULT_TYPE = None):
             rsi_signal = rsi > 70 or rsi < 30
             volume_signal = volume_now > volume_avg * 2
 
-            if (rsi_signal or volume_signal) and is_news_positive(symbol):
+            if rsi < 40 or rsi > 60 or volume_now > volume_avg * 1.5:
                 msg = f"📱 Сигнал по {symbol}\nRSI: {rsi:.2f}\nОбъём: {volume_now:.2f}"
                 ai = comment_on(symbol, rsi, volume_now)
                 if ai:
@@ -43,7 +45,10 @@ async def send_signals(context: ContextTypes.DEFAULT_TYPE = None):
                 found = True
                 break
         except Exception as e:
-            print(f"[ERROR async] {symbol}: {e}")
+            import traceback
+            print(f"[ERROR] {symbol}: {e}")
+            traceback.print_exc()
+
 
     if not found:
         await bot.send_message(chat_id=CHAT_ID, text="🚫 Сигналы не найдены")
@@ -55,6 +60,8 @@ def auto_check():
     for symbol in symbols:
         try:
             closes, volumes = get_klines(symbol)
+
+            print(f"[DEBUG] {symbol}: {len(closes)} свечей")
             if len(closes) < 20:
                 continue
 
@@ -65,7 +72,7 @@ def auto_check():
             rsi_signal = rsi > 70 or rsi < 30
             volume_signal = volume_now > volume_avg * 2
 
-            if (rsi_signal or volume_signal) and is_news_positive(symbol):
+            if rsi < 40 or rsi > 60 or volume_now > volume_avg * 1.5:
                 msg = f"📱 Сигнал по {symbol}\nRSI: {rsi:.2f}\nОбъём: {volume_now:.2f}"
                 ai = comment_on(symbol, rsi, volume_now)
                 if ai:
@@ -84,7 +91,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔍 Найти точку входа", callback_data='find_signal')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Выберите действие:", reply_markup=reply_markup)
+
+    if update.message:
+        await update.message.reply_text("Выберите действие:", reply_markup=reply_markup)
+    elif update.callback_query:
+        await update.callback_query.message.reply_text("Выберите действие:", reply_markup=reply_markup)
+
 
 
 # 👇 Обработка кнопок
