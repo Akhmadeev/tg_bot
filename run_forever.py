@@ -1,11 +1,11 @@
-from bot import run_bot, auto_check
+from bot import main
 import threading
 import time
 
 def run_looped_analysis():
     while True:
         print("🔄 Автоматический анализ рынка...")
-        auto_check()
+        main()
         time.sleep(300)  # 5 минут
 
 if __name__ == "__main__":
@@ -14,4 +14,4 @@ if __name__ == "__main__":
     thread.start()
 
     # Запускаем Telegram-бота
-    run_bot()
+    main()
