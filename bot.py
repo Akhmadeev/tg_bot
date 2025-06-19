@@ -1,4 +1,6 @@
-from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
+# bot.py
+import asyncio
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, Bot
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from config import TELEGRAM_TOKEN, CHAT_ID
 from bybit_api import get_all_spot_symbols, get_klines
@@ -7,61 +9,16 @@ from ai_comment import comment_on
 from news import is_news_positive
 from chart import save_chart
 import time
-import logging
-import asyncio
+from datetime import datetime
 
-logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TELEGRAM_TOKEN)
 
-
-# 👇 async: Отправка одного сигнала по запросу
-async def send_signals(context: ContextTypes.DEFAULT_TYPE = None):
-    symbols = get_all_spot_symbols()
-    found = False
-
-    for symbol in symbols[:20]:  # ограничим до 20
-        try:
-            closes, volumes = get_klines(symbol)
-
-            print(f"[DEBUG] {symbol}: {len(closes)} свечей")
-            if len(closes) < 20:
-                continue
-
-            rsi = calculate_rsi(closes)[-1]
-            volume_now = volumes[-1]
-            volume_avg = sum(volumes[-10:]) / 10
-
-            rsi_signal = rsi > 70 or rsi < 30
-            volume_signal = volume_now > volume_avg * 2
-
-            if rsi < 40 or rsi > 60 or volume_now > volume_avg * 1.5:
-                msg = f"📱 Сигнал по {symbol}\nRSI: {rsi:.2f}\nОбъём: {volume_now:.2f}"
-                ai = comment_on(symbol, rsi, volume_now)
-                if ai:
-                    msg += f"\n🤖 AI: {ai}"
-
-                chart_path = save_chart(symbol, closes)
-                await bot.send_photo(chat_id=CHAT_ID, photo=open(chart_path, "rb"), caption=msg)
-                found = True
-                break
-        except Exception as e:
-            import traceback
-            print(f"[ERROR] {symbol}: {e}")
-            traceback.print_exc()
-
-
-    if not found:
-        await bot.send_message(chat_id=CHAT_ID, text="🚫 Сигналы не найдены")
-
-
-# 👇 sync: Автоматическая проверка (используется в run_forever)
-def auto_check():
+# 🔍 Поиск сигналов
+async def find_signals():
     symbols = get_all_spot_symbols()
     for symbol in symbols:
         try:
             closes, volumes = get_klines(symbol)
-
-            print(f"[DEBUG] {symbol}: {len(closes)} свечей")
             if len(closes) < 20:
                 continue
 
@@ -72,46 +29,67 @@ def auto_check():
             rsi_signal = rsi > 70 or rsi < 30
             volume_signal = volume_now > volume_avg * 2
 
-            if rsi < 40 or rsi > 60 or volume_now > volume_avg * 1.5:
-                msg = f"📱 Сигнал по {symbol}\nRSI: {rsi:.2f}\nОбъём: {volume_now:.2f}"
+            if (rsi_signal or volume_signal) and is_news_positive(symbol):
+                direction = "🔼 ЛОНГ" if rsi < 30 else "🔽 ШОРТ"
+                target_price = closes[-1] * (1.03 if rsi < 30 else 0.97)
+                link = f"https://www.bybit.com/trade/usdt/{symbol.replace('USDT', '')}USDT"
+
+                msg = (
+                    f"📈 Сигнал по <b>{symbol}</b>\n"
+                    f"RSI: {rsi:.2f}\n"
+                    f"Объём: {volume_now:.2f}\n"
+                    f"{direction}\n"
+                    f"🎯 Цель: {target_price:.4f}\n"
+                    f"🔗 <a href=\"{link}\">Торговать на фьючерсах</a>"
+                )
+
                 ai = comment_on(symbol, rsi, volume_now)
                 if ai:
                     msg += f"\n🤖 AI: {ai}"
 
                 chart_path = save_chart(symbol, closes)
-                bot.send_photo(chat_id=CHAT_ID, photo=open(chart_path, "rb"), caption=msg)
-                time.sleep(1)
+                await bot.send_photo(chat_id=CHAT_ID, photo=open(chart_path, "rb"), caption=msg, parse_mode="HTML")
+                await asyncio.sleep(1)
+
         except Exception as e:
-            print(f"[ERROR sync] {symbol}: {e}")
+            print(f"[ERROR] {symbol}: {e}")
 
-
-# 👇 /start меню
+# 📲 Команды Telegram-бота
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("🔍 Найти точку входа", callback_data='find_signal')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
     if update.message:
+        keyboard = [
+            [InlineKeyboardButton("🚀 Найти сигнал сейчас", callback_data="find_signal")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("Выберите действие:", reply_markup=reply_markup)
-    elif update.callback_query:
-        await update.callback_query.message.reply_text("Выберите действие:", reply_markup=reply_markup)
 
-
-
-# 👇 Обработка кнопок
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.data == 'find_signal':
-        await query.edit_message_text("⏳ Поиск лучших точек входа...")
-        await send_signals(context)
+    if query.data == "find_signal":
+        await query.edit_message_text("Ищу сигналы...")
+        await find_signals()
 
+# 🕒 Фоновая задача
+async def scheduled_scanner():
+    while True:
+        print(f"🕒 Автопоиск {datetime.now().strftime('%H:%M:%S')}")
+        await find_signals()
+        await asyncio.sleep(600)  # каждые 10 минут
 
-# 👇 Запуск Telegram-бота (параллельно с автоанализом)
-def run_bot():
+# 🚀 Запуск
+def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(CallbackQueryHandler(handle_button))
+
+    # добавляем фоновую задачу
+    app.create_task(scheduled_scanner())
+
+    print("🔄 Бот запущен")
     app.run_polling()
+
+if __name__ == "__main__":
+    main()
