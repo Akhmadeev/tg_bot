@@ -1,3 +1,4 @@
+
 from bybit_api import get_all_spot_symbols, get_klines
 from indicators import calculate_rsi
 from news import is_news_positive, get_hot_news_for_symbol
@@ -31,7 +32,7 @@ async def find_signals(bot, chat_id=None):
                 with open(chart_path, "rb") as photo:
                     reply_markup = InlineKeyboardMarkup([
                         [InlineKeyboardButton("🧠 Запросить мнение AI", callback_data=f"ai_comment|{symbol}|{rsi:.2f}|{volume_now:.2f}")],
-                        [InlineKeyboardButton("⬅️ Назад в меню", callback_data="entry_point")]
+                        [InlineKeyboardButton("⬅️ Назад в меню", callback_data="start")]
                     ])
                     await bot.send_photo(chat_id=chat_id or CHAT_ID, photo=photo, caption=msg, parse_mode='Markdown', reply_markup=reply_markup)
         except Exception as e:
@@ -54,7 +55,7 @@ async def find_news_with_volume_spike(bot, chat_id=None):
                 if news:
                     msg = f"📰 Новости по {symbol} ( +{volume_growth:.2f}% объем):\n{news}"
                     reply_markup = InlineKeyboardMarkup([
-                        [InlineKeyboardButton("⬅️ Назад в меню", callback_data="news_volume")]
+                        [InlineKeyboardButton("⬅️ Назад в меню", callback_data="start")]
                     ])
                     await bot.send_message(chat_id=chat_id or CHAT_ID, text=msg, reply_markup=reply_markup)
         except Exception as e:
