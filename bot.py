@@ -38,8 +38,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("🔄 Получение новостей и анализа...", reply_markup=get_main_keyboard())
         await find_news_with_volume_spike(context.bot, chat_id=query.message.chat.id)
     elif data == "check_price":
-        await query.edit_message_text("Введите тикер монеты (например: ton):")
-        context.user_data["awaiting_symbol"] = True
+        await query.edit_message_text("Введите тикер монеты (например: TON):")
+               context.user_data["awaiting_symbol"] = True
     elif data.startswith("stub"):
         await query.edit_message_text("🚫 Функция в разработке", reply_markup=get_main_keyboard())
     elif data.startswith("ai_comment"):
@@ -61,7 +61,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("awaiting_symbol"):
         symbol = update.message.text.strip().upper()
-        print(f"Получен тикер для проверки: {symbol}")
         context.user_data["awaiting_symbol"] = False
 
         try:
@@ -72,9 +71,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                    f"🔗 <a href='{link}'>Фьючерсы на Bybit</a>")
             await update.message.reply_text(msg, parse_mode="HTML", reply_markup=get_main_keyboard())
         except Exception as e:
-            print(f"Ошибка при получении цены: {e}")
-            msg = f"❌ Ошибка при получении данных по {symbol}: {e}"
-            await update.message.reply_text(msg, reply_markup=get_main_keyboard())
+            await update.message.reply_text(f"❌ Ошибка при получении данных по {symbol}: {e}", reply_markup=get_main_keyboard())
     else:
         await update.message.reply_text("Пожалуйста, выберите действие из меню.", reply_markup=get_main_keyboard())
 
