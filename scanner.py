@@ -1,4 +1,3 @@
-
 from bybit_api import get_all_spot_symbols, get_klines
 from indicators import calculate_rsi
 from news import is_news_positive, get_hot_news_for_symbol
@@ -21,8 +20,7 @@ async def find_signals(bot, chat_id=None):
             rsi_signal = rsi > 70 or rsi < 30
             volume_signal = volume_now > volume_avg * 2
 
-#           if (rsi_signal or volume_signal) and is_news_positive(symbol):
-            if (rsi_signal or volume_signal):
+            if (rsi_signal or volume_signal):  # отключена проверка новостей временно
                 direction = "LONG" if rsi < 30 else "SHORT"
                 target_price = closes[-1] * (1.03 if direction == "LONG" else 0.97)
 

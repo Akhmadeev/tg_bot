@@ -12,3 +12,10 @@ def get_klines(symbol, interval="15"):
     closes = [float(c[4]) for c in candles]
     volumes = [float(c[5]) for c in candles]
     return closes, volumes
+
+def get_current_price_and_trend(symbol: str) -> tuple:
+    # Пример с фейковыми данными, замените реальным API-вызывающим кодом
+    import random
+    price = random.uniform(1, 100)
+    trend = random.choice(["вверх", "вниз", "боковик"])
+    return price, trend
