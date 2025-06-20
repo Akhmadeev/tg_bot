@@ -43,7 +43,8 @@ async def button_handler(update, context):
     elif query.data.startswith("ai_comment"):
         _, symbol, rsi, volume = query.data.split("|")
         ai = comment_on(symbol, float(rsi), float(volume))
-        msg = f"🧐 AI-комментарий по {symbol}:\n{ai}"
+        msg = f"💮 AI-комментарий по {symbol}:
+{ai}"
         await context.bot.send_message(chat_id=query.message.chat_id, text=msg, reply_markup=get_main_keyboard())
     elif query.data == "start":
         await start(update, context)
@@ -81,13 +82,10 @@ async def main():
 
     print("✅ Бот запущен.")
 
-    # Отправить стартовое меню при запуске (если еще не отправлено)
+    # Отправить стартовое меню при запуске
     if CHAT_ID != "your_chat_id_here":
         try:
-            chat = await app.bot.get_chat(CHAT_ID)
-            history = await app.bot.get_chat_history(chat_id=CHAT_ID, limit=1)
-            if not history or all("Бот запущен." not in msg.text for msg in history if msg.text):
-                await app.bot.send_message(chat_id=CHAT_ID, text="Бот запущен. Выберите действие:", reply_markup=get_main_keyboard())
+            await app.bot.send_message(chat_id=CHAT_ID, text="✅ Бот запущен. Выберите действие:", reply_markup=get_main_keyboard())
         except Exception as e:
             print(f"❌ Не удалось отправить стартовое меню: {e}")
 
