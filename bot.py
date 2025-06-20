@@ -35,7 +35,7 @@ async def button_handler(update, context):
         _, symbol, rsi, volume = query.data.split("|")
         ai = comment_on(symbol, float(rsi), float(volume))
         msg = f"🧠 AI-комментарий по {symbol}:\n{ai}"
-        await context.bot.send_message(chat_id=query.message.chat_id, text=msg)
+        await context.bot.send_message(chat_id=query.message.chat_id, text=msg, reply_markup=main_keyboard)
 
 # Периодический анализ
 async def scheduled_scanner(bot):

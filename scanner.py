@@ -3,6 +3,7 @@ from indicators import calculate_rsi
 from news import is_news_positive, get_hot_news_for_symbol
 from chart import save_chart
 from config import CHAT_ID
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 async def find_signals(bot, chat_id=None):
     symbols = get_all_spot_symbols()
@@ -29,7 +30,8 @@ async def find_signals(bot, chat_id=None):
                 chart_path = save_chart(symbol, closes)
                 with open(chart_path, "rb") as photo:
                     reply_markup = InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🧠 Запросить мнение AI", callback_data=f"ai_comment|{symbol}|{rsi:.2f}|{volume_now:.2f}")]
+                        [InlineKeyboardButton("🧠 Запросить мнение AI", callback_data=f"ai_comment|{symbol}|{rsi:.2f}|{volume_now:.2f}")],
+                        [InlineKeyboardButton("⬅️ Назад в меню", callback_data="entry_point")]
                     ])
                     await bot.send_photo(chat_id=chat_id or CHAT_ID, photo=photo, caption=msg, parse_mode='Markdown', reply_markup=reply_markup)
         except Exception as e:
@@ -51,6 +53,9 @@ async def find_news_with_volume_spike(bot, chat_id=None):
                 news = get_hot_news_for_symbol(symbol)
                 if news:
                     msg = f"📰 Новости по {symbol} ( +{volume_growth:.2f}% объем):\n{news}"
-                    await bot.send_message(chat_id=chat_id or CHAT_ID, text=msg)
+                    reply_markup = InlineKeyboardMarkup([
+                        [InlineKeyboardButton("⬅️ Назад в меню", callback_data="news_volume")]
+                    ])
+                    await bot.send_message(chat_id=chat_id or CHAT_ID, text=msg, reply_markup=reply_markup)
         except Exception as e:
             print(f"[NEWS ERROR] {symbol}: {e}")
