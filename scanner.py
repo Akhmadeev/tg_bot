@@ -21,7 +21,8 @@ async def find_signals(bot, chat_id=None):
             rsi_signal = rsi > 70 or rsi < 30
             volume_signal = volume_now > volume_avg * 2
 
-            if (rsi_signal or volume_signal) and is_news_positive(symbol):
+#           if (rsi_signal or volume_signal) and is_news_positive(symbol):
+            if (rsi_signal or volume_signal):
                 direction = "LONG" if rsi < 30 else "SHORT"
                 target_price = closes[-1] * (1.03 if direction == "LONG" else 0.97)
 
