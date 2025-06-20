@@ -1,8 +1,12 @@
 import asyncio
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, CallbackQueryHandler,
+    MessageHandler, filters, ContextTypes
+)
 from config import TELEGRAM_TOKEN
 from bybit_api import get_current_price_and_trend
+
 
 def get_main_keyboard():
     keyboard = [
@@ -11,12 +15,14 @@ def get_main_keyboard():
     ]
     return InlineKeyboardMarkup(keyboard)
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Привет! Выберите действие:",
         reply_markup=get_main_keyboard()
     )
     context.user_data["awaiting_symbol"] = False
+
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -29,6 +35,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["awaiting_symbol"] = True
     else:
         await query.edit_message_text("Неизвестная команда.", reply_markup=get_main_keyboard())
+
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("awaiting_symbol"):
@@ -48,6 +55,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Пожалуйста, выберите действие из меню.", reply_markup=get_main_keyboard())
 
+
 async def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
@@ -59,5 +67,8 @@ async def main():
 
     await app.run_polling()
 
+
 def run_bot():
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.create_task(main())
+    loop.run_forever()
