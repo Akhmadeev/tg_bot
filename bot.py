@@ -5,7 +5,6 @@ from telegram.ext import (
     MessageHandler, filters, ContextTypes
 )
 from config import TELEGRAM_TOKEN
-from bybit_api import get_current_price_and_trend
 
 
 def get_main_keyboard():
@@ -41,17 +40,8 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("awaiting_symbol"):
         symbol = update.message.text.strip().upper()
         context.user_data["awaiting_symbol"] = False
-        try:
-            price, trend = get_current_price_and_trend(symbol)
-            link = f"https://www.bybit.com/trade/usdt/{symbol}"
-            msg = (
-                f"💱 {symbol} сейчас: ${price:.4f}\n"
-                f"📈 Тренд: {trend}\n"
-                f"🔗 <a href='{link}'>Фьючерсы на Bybit</a>"
-            )
-            await update.message.reply_text(msg, parse_mode="HTML", reply_markup=get_main_keyboard())
-        except Exception as e:
-            await update.message.reply_text(f"❌ Ошибка: {e}", reply_markup=get_main_keyboard())
+        # Здесь для теста просто отдадим echo символа (замени на реальную логику)
+        await update.message.reply_text(f"Вы ввели тикер: {symbol}", reply_markup=get_main_keyboard())
     else:
         await update.message.reply_text("Пожалуйста, выберите действие из меню.", reply_markup=get_main_keyboard())
 
@@ -65,14 +55,10 @@ async def main():
 
     print("✅ Бот запущен.")
 
-    # Вместо await app.run_polling(), используем этот вариант:
     await app.start()
     await app.updater.start_polling()
-    # Ждём, чтобы бот работал бесконечно
     await asyncio.Event().wait()
 
 
 def run_bot():
-    loop = asyncio.get_event_loop()
-    app_task = loop.create_task(main())
-    loop.run_forever()
+    asyncio.run(main())
