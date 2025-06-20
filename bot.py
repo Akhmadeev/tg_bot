@@ -17,7 +17,7 @@ def get_main_keyboard():
     ])
 
 # Команда /start
-async def start(update, context):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = get_main_keyboard()
     if update.message:
         await update.message.reply_text("Выберите действие:", reply_markup=keyboard)
@@ -25,34 +25,40 @@ async def start(update, context):
         await update.callback_query.message.edit_text("Выберите действие:", reply_markup=keyboard)
 
 # Обработка нажатий кнопок
-async def button_handler(update, context):
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.data == "entry_point":
+    data = query.data
+
+    if data == "entry_point":
         await query.edit_message_text("🔄 Расчет точки входа...", reply_markup=get_main_keyboard())
-        await find_signals(context.bot, chat_id=query.message.chat_id)
-    elif query.data == "news_volume":
+        await find_signals(context.bot, chat_id=query.message.chat.id)
+    elif data == "news_volume":
         await query.edit_message_text("🔄 Получение новостей и анализа...", reply_markup=get_main_keyboard())
-        await find_news_with_volume_spike(context.bot, chat_id=query.message.chat_id)
-    elif query.data == "check_price":
+        await find_news_with_volume_spike(context.bot, chat_id=query.message.chat.id)
+    elif data == "check_price":
         await query.edit_message_text("Введите тикер монеты (например: ton):")
         context.user_data["awaiting_symbol"] = True
-    elif query.data.startswith("stub"):
+    elif data.startswith("stub"):
         await query.edit_message_text("🚫 Функция в разработке", reply_markup=get_main_keyboard())
-    elif query.data.startswith("ai_comment"):
-        _, symbol, rsi, volume = query.data.split("|")
-        ai = comment_on(symbol, float(rsi), float(volume))
-        msg = f"💮 AI-комментарий по {symbol}:\n{ai}"
-
-        await context.bot.send_message(chat_id=query.message.chat_id, text=msg, reply_markup=get_main_keyboard())
-    elif query.data == "start":
+    elif data.startswith("ai_comment"):
+        try:
+            _, symbol, rsi, volume = data.split("|")
+            ai = comment_on(symbol, float(rsi), float(volume))
+            msg = f"🧐 AI-комментарий по {symbol}:\n{ai}"
+            await context.bot.send_message(chat_id=query.message.chat.id, text=msg, reply_markup=get_main_keyboard())
+        except Exception as e:
+            await context.bot.send_message(chat_id=query.message.chat.id, text=f"Ошибка в AI-комментарии: {e}", reply_markup=get_main_keyboard())
+    elif data == "start":
         await start(update, context)
-    elif query.data == "stats":
+    elif data == "stats":
         await query.edit_message_text("📊 Статистика за последние сутки:\n(в разработке)", reply_markup=get_main_keyboard())
+    else:
+        await query.edit_message_text("❌ Неизвестная команда", reply_markup=get_main_keyboard())
 
-# Обработка сообщений от пользователя
-async def message_handler(update, context):
+# Обработка сообщений от пользователя (например, ввод тикера)
+async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("awaiting_symbol"):
         symbol = update.message.text.strip().upper()
         context.user_data["awaiting_symbol"] = False
@@ -66,10 +72,13 @@ async def message_handler(update, context):
 
         await update.message.reply_text(msg, parse_mode="Markdown", reply_markup=get_main_keyboard())
 
-# Периодический анализ
+# Периодический анализ (запускается в фоне)
 async def scheduled_scanner(bot):
     while True:
-        await find_signals(bot)
+        try:
+            await find_signals(bot)
+        except Exception as e:
+            print(f"Ошибка в scheduled_scanner: {e}")
         await asyncio.sleep(300)
 
 # Основной запуск бота
@@ -82,10 +91,11 @@ async def main():
 
     print("✅ Бот запущен.")
 
-    # Отправить стартовое меню при запуске
+    # Отправка стартового меню при запуске
     if CHAT_ID != "your_chat_id_here":
         try:
-            await app.bot.send_message(chat_id=CHAT_ID, text="✅ Бот запущен. Выберите действие:", reply_markup=get_main_keyboard())
+            # Удаляем вызов get_chat_history — его нет в библиотеке!
+            await app.bot.send_message(chat_id=CHAT_ID, text="Бот запущен. Выберите действие:", reply_markup=get_main_keyboard())
         except Exception as e:
             print(f"❌ Не удалось отправить стартовое меню: {e}")
 
@@ -98,6 +108,6 @@ async def main():
     await app.updater.start_polling()
     await app.updater.idle()
 
-# Для запуска через run_forever.py
+# Функция для запуска из run_forever.py
 def run_bot():
     asyncio.run(main())
