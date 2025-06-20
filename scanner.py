@@ -35,3 +35,6 @@ async def find_signals(bot, chat_id=None):
                     await bot.send_photo(chat_id=chat_id or CHAT_ID, photo=photo, caption=msg, parse_mode='Markdown')
         except Exception as e:
             print(f"[ERROR] {symbol}: {e}")
+
+def run_bot():
+    asyncio.run(main())
