@@ -43,8 +43,8 @@ async def button_handler(update, context):
     elif query.data.startswith("ai_comment"):
         _, symbol, rsi, volume = query.data.split("|")
         ai = comment_on(symbol, float(rsi), float(volume))
-        msg = f"💮 AI-комментарий по {symbol}:
-{ai}"
+        msg = f"💮 AI-комментарий по {symbol}:\n{ai}"
+
         await context.bot.send_message(chat_id=query.message.chat_id, text=msg, reply_markup=get_main_keyboard())
     elif query.data == "start":
         await start(update, context)
