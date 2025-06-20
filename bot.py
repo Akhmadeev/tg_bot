@@ -65,10 +65,14 @@ async def main():
 
     print("✅ Бот запущен.")
 
-    await app.run_polling()
+    # Вместо await app.run_polling(), используем этот вариант:
+    await app.start()
+    await app.updater.start_polling()
+    # Ждём, чтобы бот работал бесконечно
+    await asyncio.Event().wait()
 
 
 def run_bot():
     loop = asyncio.get_event_loop()
-    loop.create_task(main())
+    app_task = loop.create_task(main())
     loop.run_forever()
