@@ -61,16 +61,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("awaiting_symbol"):
         symbol = update.message.text.strip().upper()
+        print(f"Получен тикер для проверки: {symbol}")
         context.user_data["awaiting_symbol"] = False
 
         try:
             price, trend = get_current_price_and_trend(symbol)
             link = f"https://www.bybit.com/trade/usdt/{symbol}"
-            msg = f"💱 {symbol} сейчас: ${price:.4f}\n📈 Тренд: {trend}\n🔗 [Фьючерсы на Bybit]({link})"
+            msg = (f"💱 {symbol} сейчас: ${price:.4f}\n"
+                   f"📈 Тренд: {trend}\n"
+                   f"🔗 <a href='{link}'>Фьючерсы на Bybit</a>")
+            await update.message.reply_text(msg, parse_mode="HTML", reply_markup=get_main_keyboard())
         except Exception as e:
+            print(f"Ошибка при получении цены: {e}")
             msg = f"❌ Ошибка при получении данных по {symbol}: {e}"
-
-        await update.message.reply_text(msg, parse_mode="Markdown", reply_markup=get_main_keyboard())
+            await update.message.reply_text(msg, reply_markup=get_main_keyboard())
+    else:
+        await update.message.reply_text("Пожалуйста, выберите действие из меню.", reply_markup=get_main_keyboard())
 
 # Периодический анализ (запускается в фоне)
 async def scheduled_scanner(bot):
