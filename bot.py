@@ -1,12 +1,15 @@
 import asyncio
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from config import TELEGRAM_TOKEN, CHAT_ID
-from scanner import find_signals
+from scanner import find_signals, find_news_with_volume_spike
 
 # Команда /start
 async def start(update, context):
-    keyboard = [[InlineKeyboardButton("🔥 Найти точку входа", callback_data="entry_point")]]
+    keyboard = [
+        [InlineKeyboardButton("🔥 Найти точку входа", callback_data="entry_point")],
+        [InlineKeyboardButton("📰 Новости + Объем", callback_data="news_volume")],
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     if update.message:
         await update.message.reply_text("Выберите действие:", reply_markup=reply_markup)
@@ -16,9 +19,12 @@ async def button_handler(update, context):
     query = update.callback_query
     await query.answer()
 
+    await query.edit_message_text("🔄 Получил запрос. Расчитываю...")
+
     if query.data == "entry_point":
-        await query.edit_message_text("⏳ Ищу волатильные монеты...")
         await find_signals(context.bot, chat_id=query.message.chat_id)
+    elif query.data == "news_volume":
+        await find_news_with_volume_spike(context.bot, chat_id=query.message.chat_id)
 
 # Периодический анализ
 async def scheduled_scanner(bot):
@@ -37,3 +43,7 @@ async def main():
 
     print("✅ Бот запущен.")
     await app.run_polling()
+
+# Для запуска через run_forever.py
+def run_bot():
+    asyncio.run(main())
