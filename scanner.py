@@ -1,8 +1,8 @@
 from bybit_api import get_all_spot_symbols, get_klines
 from indicators import calculate_rsi
-from ai_comment import comment_on
 from news import is_news_positive, get_hot_news_for_symbol
 from chart import save_chart
+from config import CHAT_ID
 
 async def find_signals(bot, chat_id=None):
     symbols = get_all_spot_symbols()
@@ -23,16 +23,15 @@ async def find_signals(bot, chat_id=None):
                 direction = "LONG" if rsi < 30 else "SHORT"
                 target_price = closes[-1] * (1.03 if direction == "LONG" else 0.97)
 
-                msg = f"📈 Сигнал по {symbol}\nRSI: {rsi:.2f}\nОбъём: {volume_now:.2f}\n\n🗓 Рекомендуется {direction} до {target_price:.4f}"
+                msg = f"📈 Сигнал по {symbol}\nRSI: {rsi:.2f}\nОбъ𐄀м: {volume_now:.2f}\n\n🗓 Рекомендуется {direction} до {target_price:.4f}"
                 msg += f"\n\n→ [Открыть на Bybit](https://www.bybit.com/trade/usdt/{symbol.replace('USDT', '')})"
-
-                ai = comment_on(symbol, rsi, volume_now)
-                if ai:
-                    msg += f"\n🤖 AI: {ai}"
 
                 chart_path = save_chart(symbol, closes)
                 with open(chart_path, "rb") as photo:
-                    await bot.send_photo(chat_id=chat_id or CHAT_ID, photo=photo, caption=msg, parse_mode='Markdown')
+                    reply_markup = InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🧠 Запросить мнение AI", callback_data=f"ai_comment|{symbol}|{rsi:.2f}|{volume_now:.2f}")]
+                    ])
+                    await bot.send_photo(chat_id=chat_id or CHAT_ID, photo=photo, caption=msg, parse_mode='Markdown', reply_markup=reply_markup)
         except Exception as e:
             print(f"[ERROR] {symbol}: {e}")
 
