@@ -79,30 +79,17 @@ async def main():
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), message_handler))
 
-    # Отправить стартовое меню при запуске (если еще не отправлено)
-    if CHAT_ID != "your_chat_id_here":
-        try:
-            chat = await app.bot.get_chat(CHAT_ID)
-            history = await app.bot.get_chat_history(chat_id=CHAT_ID, limit=1)
-            if not history or all("Бот запущен." not in msg.text for msg in history if msg.text):
-                await app.bot.send_message(chat_id=CHAT_ID, text="Бот запущен. Выберите действие:", reply_markup=get_main_keyboard())
-        except Exception as e:
-            print(f"❌ Не удалось отправить стартовое меню: {e}")
-
     app.create_task(scheduled_scanner(app.bot))
 
     print("✅ Бот запущен.")
     await app.run_polling()
 
+
 # Для запуска через run_forever.py
 def run_bot():
     try:
         loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-
-    if loop and loop.is_running():
         print("⚠️ Event loop уже запущен. Использую create_task.")
         loop.create_task(main())
-    else:
+    except RuntimeError:
         asyncio.run(main())
