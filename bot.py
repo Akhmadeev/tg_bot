@@ -43,7 +43,8 @@ async def button_handler(update, context):
     elif query.data.startswith("ai_comment"):
         _, symbol, rsi, volume = query.data.split("|")
         ai = comment_on(symbol, float(rsi), float(volume))
-        msg = f"🧠 AI-комментарий по {symbol}:\n{ai}"
+        msg = f"🧐 AI-комментарий по {symbol}:
+{ai}"
         await context.bot.send_message(chat_id=query.message.chat_id, text=msg, reply_markup=get_main_keyboard())
     elif query.data == "start":
         await start(update, context)
@@ -79,17 +80,27 @@ async def main():
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), message_handler))
 
-    app.create_task(scheduled_scanner(app.bot))
-
     print("✅ Бот запущен.")
-    await app.run_polling()
 
+    # Отправить стартовое меню при запуске (если еще не отправлено)
+    if CHAT_ID != "your_chat_id_here":
+        try:
+            chat = await app.bot.get_chat(CHAT_ID)
+            history = await app.bot.get_chat_history(chat_id=CHAT_ID, limit=1)
+            if not history or all("Бот запущен." not in msg.text for msg in history if msg.text):
+                await app.bot.send_message(chat_id=CHAT_ID, text="Бот запущен. Выберите действие:", reply_markup=get_main_keyboard())
+        except Exception as e:
+            print(f"❌ Не удалось отправить стартовое меню: {e}")
+
+    async def post_init():
+        app.create_task(scheduled_scanner(app.bot))
+
+    await app.initialize()
+    await app.start()
+    await post_init()
+    await app.updater.start_polling()
+    await app.updater.idle()
 
 # Для запуска через run_forever.py
 def run_bot():
-    try:
-        loop = asyncio.get_running_loop()
-        print("⚠️ Event loop уже запущен. Использую create_task.")
-        loop.create_task(main())
-    except RuntimeError:
-        asyncio.run(main())
+    asyncio.run(main())
